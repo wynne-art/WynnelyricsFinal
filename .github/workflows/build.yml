@@ -24,11 +24,30 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
+      - name: Locate or extract Gradle project
+        id: locate
+        run: |
+          BUILD_FILE=$(find . -maxdepth 4 -name "build.gradle" | head -n 1)
+          if [ -z "$BUILD_FILE" ]; then
+            ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+            if [ -n "$ZIP_FILE" ]; then
+              mkdir -p _extracted
+              unzip -q "$ZIP_FILE" -d _extracted
+              BUILD_FILE=$(find _extracted -maxdepth 4 -name "build.gradle" | head -n 1)
+            fi
+          fi
+          if [ -z "$BUILD_FILE" ]; then
+            echo "ERROR: build.gradle tidak ditemukan di repositori!"
+            exit 1
+          fi
+          echo "dir=$(dirname "$BUILD_FILE")" >> "$GITHUB_OUTPUT"
+
       - name: Build mod JAR
+        working-directory: ${{ steps.locate.outputs.dir }}
         run: gradle build
 
       - name: Upload built JAR
         uses: actions/upload-artifact@v4
         with:
           name: wynlyrics-1.21.1-jar
-          path: build/libs/*.jar
+          path: "**/build/libs/*.jar"
